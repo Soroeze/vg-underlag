@@ -35,15 +35,36 @@ Det korta och snabba svaret är att TCP/IP "använder" 5 lager/skikt medans OSI 
 | **Nätverk (L3)** | IP | Vi sätter t.ex. **Source IP** `192.168.1.50` och **Dest IP** (8.8.8.8) google.com. | **Source NAT eller bara NAT:** Här händer magin! Här tolkas och dirigeras nätverket till sina rätta platser. I detta fallet så vill `192.168.1.50` komma åt google.com (8.8.8.8) och routern gör sin magi och sen slussar den ut förfrågan till från routern, eller ja, från klientens perspektiv Gateway och nu måste förfrågan passera ut till den publika IP. Vi kan även snabbt ta upp TTL (Time to live). Alltså hur länge ett last/paket/förfrågan får "leva" på varje hopp fram till google.com. Annars så kan man råka ut att det åker runt i cirklar! Du trodde heller väl inte att det var en rakt sträcka till google.com!? |
 | **Länk / Datalänk (L2)** | Ethernet | **Source MAC** (klientens nätverkskort) och **Destination MAC** (Default Gateways MAC-adress). | Ah! Dem fysiska länkarna och adresserna! Dem måste ju hitta varandra fysiskt också. MAC-adresser är som namnet på enheterna.**OBS!** Numera så kan man slumpmässa fram MAC-adresser för säkerhetens skull innan den skickas ut från publika IP eller att varje hopp/NAT men vi håller oss till privat nätverk så länge. Här tas reda på vilka och vad för enheter som pratas. I detta fallet är det ju klientens nätverkskort som säger till att jag har denna MAC-adress så du vet det! Gateway/routern säger "OKEJ! Då vet jag! Jag har denna MAC-adressen så du vet de med!" Coolt säger båda och nu är vi ihopkopplade via Ethernet och kan prata med varandra!|
 
+### Nätverksresan: Diagram/Excalidraw Edition
+
 ![Förenklad ritning av nätverkets resa](./img/network-travel.png)
+
+### Nätverksresan: Tabell Edition
+
+| Steg | Enhet / Roll | Trafik & Riktning | Adresser & Portar | Vad händer |
+| :--- | :--- | :--- | :--- | :--- |
+| **1. Packar lasten** | **Klient-VM** | Internt på Klient | IP: `192.168.1.50`<br>MAC: `AA:AB:AA:BB`<br>Port: `53021` | *"Jag vill komma åt https://www.google.com!"*<br>*"Okej, ska packa denna last fint. HTTPS, DNS 53/UDP, min port....slumpmässar (TCP) port 53021, google.com....Har jag glömt något? Tror inte det. Aja, Hallå Gateway/router! Det är jag! 192.168.1.50 med MAC-adress AA:AB:AA:BB! Här kommer ett paket!"* |
+| **2. Skickar på LAN** | **Klient $\rightarrow$ Gateway** | **Paket på LAN** | Src: `192.168.1.50`<br>Dst: `192.168.1.1` (Gateway) | Paketet lämnar nätverkskortet och skickas lokalt till routern. |
+| **3. DNS-uppslag** | **Gateway $\rightarrow$ DNS** | **DNS-uppslag** (UDP) | Dst: `8.8.8.8:53` | *"Okej, jag har fått förfrågan att 192.168.1.50 vill komma åt google.com via HTTPS. Jag skickar DNS-förfrågan via UDP:53....."* |
+| **4. DNS-svar** | **DNS Resolver** | **DNS-svar** | Resolver: `8.8.8.8:53`<br>Klient/GW: `99.99.90.90:53` | *"Okej, 99.99.90.90:53 letar efter google.com.....DÄR! 8.8.8.8 via HTTPS!"* |
+| **5. ARP, NAT & TTL** | **Gateway / NAT** | Internt i routern | LAN: `192.168.1.1`<br>WAN: `99.99.90.90` | *"Det är på 8.8.8.8 (port 443) via HTTPS! Okej, ska kolla bara om jag behöver gå ut här ifrån. Jag testar att köra ARP för kolla om den ingår på min privata nätverk...Nej, då åker vi ut då! Vi kör lite NAT-magi.....sådär! Då försöker vi nå 8.8.8.8:443! Kanske ska lägga till TTL så att den inte hoppar runt i evigheter!"* |
+| **6. Paket på WAN** | **Gateway $\rightarrow$ ISP $\rightarrow$ Google** | **Paket på WAN** | Src: `99.99.90.90`<br>Dst: `8.8.8.8:443` | *"Okej, ISP! Skicka vidare detta och troligen så kommer ni köra NAT på detta!.....Hop, hop, hop.....nähä, vi väljer en annan route, paketet har väntat för länge...hop. Hej, Google.com!"* |
+| **7. Serverrespons** | **Google.com** | **Svar** över WAN | Server: `8.8.8.8:443`<br>Dst: `99.99.90.90` | *"Nämen! Tjena 99.99.90.90! Hur kan jag stå till tjänst?"* |
+| **8. Retur till LAN** | **Gateway $\rightarrow$ Klient** | **Svar** över LAN | WAN: `99.99.90.90` $\rightarrow$<br>LAN: `192.168.1.50:53021` | Routern kollar sin NAT-översättningstabell, byter tillbaka destinationsadressen till klientens privata IP och skickar paketet vidare på det lokala nätet. |
+| **9. Framme vid målet** | **Klient-VM** | Anslutning etablerad | `192.168.1.50` | *"Jippi, jag har kommit åt google.com!"* |
 
 # 3. Moment B: Jämförande OS- och Behörighetsanalys (Mål 2)
 
 ## Linux/POSIX
-Filen eller filerna tilldelas användaren _alice_ som personlig ägare och hennes primära grupp g_ledare som ägargrupp. I traditionell POSIX sker inget automatiskt arv av rättigheter från mapp och undermappar vid filskapande; filens modbitar avgörs istället av användarens umask(t.ex. 000, alla rättigheter för alla!). För att gruppen g_personal (Bob) ska få skrivåtkomst till Alice nyskapade fil krävs en Default ACL (setfacl -d), som tvingar filsystemet att automatiskt applicera accessreglerna för båda grupperna på varje nytt objekt under katalogen.
-## Windows (NTFS/ACL)
+Filen eller filerna tilldelas användaren _alice_ som personlig ägare och hennes primära grupp g_ledare som ägargrupp. I traditionell POSIX sker inget automatiskt arv av rättigheter från mapp och undermappar vid filskapande; filens modbitar avgörs istället av användarens umask(t.ex. 000, alla rättigheter för alla! Man kör subtrahering här. 777 betyder att butiken är stängt för alla!). För att gruppen g_personal (Bob) ska få skrivåtkomst till Alice nyskapade fil krävs en Default ACL (setfacl -d), som tvingar filsystemet att automatiskt applicera accessreglerna för båda grupperna på varje nytt objekt under katalogen.
+## Windows (NFS/NTFS)
 Alice blir registrerad som filens ägare eftersom det var hon som skapade den, men i Windows spelar ägaren ingen roll för vem som får komma åt den.
 Windows sköter arv helt automatiskt. Eftersom mappen Gemensamt var inställd på att skicka vidare sina rättigheter till nya filer p.g.a. OI (Object Inherited = Filens arv) och CI (Container Inherited= Mappens arv), får den nya filen direkt samma regler: g_personal får läsa och ändra (Modify). Det syns i behörighetslistan som ett litet (I) för Inherited (ärvt). Bob kan därför öppna och redigera filen direkt, utan att någon behöver göra något manuellt.
+
+## Summering
+[Djupgående om POSIX och andra ACL:er](https://www.pistack.xyz/posts/2026-05-22-self-hosted-linux-file-access-control-lists-posix-nfs4-richacl-guide/). Man kan gå väldigt djup på skillnanderna men vi håller oss simpelt för demo-skäl! POSIX(tradtionell, utan tillägg) anses vara ett simpelt och enkelt behörighetssystem som kan göra lite extra med ACL-tillägg. Egentligen så är allt ACL (Access Control List) men man särskiljer kort med POSIX(Linux/Unix-like) och ACL(Windows eller "moderna" OS). Så det är rätt att skriva "POSIX ACL" eller "NFSv4 ACL" eller NTFS ACL. Men man förkortar akronymer ännu mer. 
+
+Summeringen är att POSIX inte har lika "bra/avancerad" behörihetsfunktioner som NFS/NTFS och att man får hålla koll på hur rättigheterna och behörigheter mellan dessa ACls! Men det mesta kan lösas med lite trixande!
 
 
 # 4. Moment C: Spårbarhet & Överlämningsdokumentation (Mål 8)
@@ -178,7 +199,7 @@ sudo setfacl -d -m g:g_ledare:rwx,g:g_personal:rwx /Projekt/Gemensamt
 #### Windows
 
 ```
-#Windows använder ACL eller DACL för filer och SACl för att kolla loggar. Men kan kalla det för ACl för enkelhetens skull.
+#Windows använder ACL eller DACL för filer och SACl för att kolla loggar. Men kan kalla det för ACl för enkelhetens skull. Men hela namnet/akronymet är NTFS ACL eller tvillingen NFSv4 ACL.
 
 Okej, håll i hatten hårdare!
 
@@ -437,6 +458,6 @@ PS C:\WINDOWS\system32>
 ```
 # Slutsats och AI-reflektion
 
-Äntligen! Nu kan vi summera detta! Jag har tidigare erfarenheter med Linux och dess terminaler. Inte helt van med powershell och deras väldigt specifika kommandon (Om man inte har auto-complete plugins). CMD har man använt några gånger. Det jag fick lära mig på nytt/sprången var skillnanden mellan POSIX och ACL och hur annorlunda powershell "språket" är. Det är här AI kommer in. Eftersom jag inte tänker googla <ins>v-a-r-t-e-n-d-a</ins> powershell-kommando så frågar jag AI vilka kommandon skulle passa här. Jag körde och undersökte om jag kunde köra kommandon annorlunda eller att få ett annat resultat, för att jag har varit med att AI har hallucinaterat flertals gånger, speciellt på Polska eller Kinesiska.....helt enkelt på annat språk.
+Äntligen! Nu kan vi summera detta! Jag har tidigare erfarenheter med Linux och dess terminaler. Inte helt van med powershell och deras väldigt specifika kommandon (Om man inte har auto-complete plugins). CMD har man använt några gånger. Det jag fick lära mig på nytt/sprången var skillnanden mellan POSIX och NTFS/NFS och hur annorlunda powershell "språket" är. Det är här AI kommer in. Eftersom jag inte tänker googla <ins>v-a-r-t-e-n-d-a</ins> powershell-kommando så frågar jag AI vilka kommandon skulle passa här. Jag körde och undersökte om jag kunde köra kommandon annorlunda eller att få ett annat resultat, för att jag har varit med att AI har hallucinaterat flertals gånger, speciellt på Polska eller Kinesiska.....helt enkelt på annat språk.
 
 Slutligen vill jag bara tilägga att detta tog en bra tid att avklara men jag lärde mig faktiskt ganska mycket. En sista grej! AI är <ins>***ett verktyg***</ins>, inte lösningen! Du skyller väl inte på att hammaren som **DU** tappade på tån, orsakade skadan och/eller du skyller heller inte på att hammaren byggde fel?
