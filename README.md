@@ -64,7 +64,7 @@ Windows sköter arv helt automatiskt. Eftersom mappen Gemensamt var inställd p�
 ## Summering
 [Djupgående om POSIX och andra ACL:er](https://www.pistack.xyz/posts/2026-05-22-self-hosted-linux-file-access-control-lists-posix-nfs4-richacl-guide/). Man kan gå väldigt djupt på skillnanderna men vi håller oss simpelt för demo-skäl! POSIX(tradtionell, utan tillägg) anses vara ett simpelt och enkelt behörighetssystem som kan göra lite extra med ACL-tillägg. Egentligen så är allt ACL (Access Control List) men man särskiljer kort med POSIX(Linux/Unix-like) och ACL(Windows eller "moderna" OS). Så det är rätt att skriva "POSIX ACL" eller "NFSv4 ACL" eller NTFS ACL. Men man förkortar akronymer ännu mer. 
 
-Summeringen är att POSIX inte har lika "bra/avancerad" behörihetsfunktioner som NFS/NTFS och att man får hålla koll på hur rättigheterna och behörigheter mellan dessa ACls! Men det mesta kan lösas med lite trixande!
+Summeringen är att POSIX inte har lika "bra/avancerad" behörighetsfunktioner som NFS/NTFS och att man får hålla koll på hur rättigheterna och behörigheter mellan dessa ACls! Men det mesta kan lösas med lite trixande!
 
 
 # 4. Moment C: Spårbarhet & Överlämningsdokumentation (Mål 8)
