@@ -39,13 +39,77 @@ Det korta och snabba svaret är att TCP/IP "använder" 5 lager/skikt medans OSI 
 
 # 3. Moment B: Jämförande OS- och Behörighetsanalys (Mål 2)
 
-##
-
-
-##
+## Linux/POSIX
+Filen eller filerna tilldelas användaren _alice_ som personlig ägare och hennes primära grupp g_ledare som ägargrupp. I traditionell POSIX sker inget automatiskt arv av rättigheter från mapp och undermappar vid filskapande; filens modbitar avgörs istället av användarens umask(t.ex. 777). För att gruppen g_personal (Bob) ska få skrivåtkomst till Alice nyskapade fil krävs en Default ACL (setfacl -d), som tvingar filsystemet att automatiskt applicera accessreglerna för båda grupperna på varje nytt objekt under katalogen.
+## Windows (NTFS/ACL)
+Alice blir registrerad som filens ägare eftersom det var hon som skapade den, men i Windows spelar ägaren ingen roll för vem som får komma åt den.
+Windows sköter arv helt automatiskt. Eftersom mappen Gemensamt var inställd på att skicka vidare sina rättigheter till nya filer p.g.a. OI (Object Inherited = Filens arv) och CI (Container Inherited= Mappens arv), får den nya filen direkt samma regler: g_personal får läsa och ändra (Modify). Det syns i behörighetslistan som ett litet (I) för Inherited (ärvt). Bob kan därför öppna och redigera filen direkt, utan att någon behöver göra något manuellt.
 
 
 # 4. Moment C: Spårbarhet & Överlämningsdokumentation (Mål 8)
+
+Vi kan köra skript eller klara kommandon!
+
+## Linux/Ubuntu
+Vi kan göra det via en shell/bash-skript. T.ex. `setup.sh`
+
+```
+# 1. Skapa grupper
+sudo groupadd g_ledare
+sudo groupadd g_personal
+
+# 2. Skapa användare med hemkatalog och primär grupp
+sudo useradd -m -s /bin/bash -g g_ledare alice
+sudo useradd -m -s /bin/bash -g g_personal bob
+
+# Sätt lösenord
+echo "alice:Labb123!" | sudo chpasswd
+echo "bob:Labb123!" | sudo chpasswd
+
+# 3. Skapa kataloger
+sudo mkdir -p /Projekt/Gemensamt
+sudo mkdir -p /Projekt/Ledning
+sudo chmod 755 /Projekt
+
+# 4. Sätt behörigheter på Ledning (bara ledningen kommer åt)
+sudo chown root:g_ledare /Projekt/Ledning
+sudo chmod 770 /Projekt/Ledning
+
+# 5. Sätt behörigheter på Gemensamt med POSIX ACL
+sudo chown root:root /Projekt/Gemensamt
+sudo chmod 770 /Projekt/Gemensamt
+# Rättigheter på mappen nu:
+sudo setfacl -m g:g_ledare:rwx,g:g_personal:rwx /Projekt/Gemensamt
+# Arv för nya filer (-d):
+sudo setfacl -d -m g:g_ledare:rwx,g:g_personal:rwx /Projekt/Gemensamt
+```
+
+## Windows
+Okej, här får man köra powershell med administratörprivilgie och kolla vilket språk. <ins>***"admin"***</ins> är på för språk! Men annars kan vi typ göra en `setup.ps1`
+```
+# 1. Skapa lokala grupper
+New-LocalGroup -Name "g_ledare"
+New-LocalGroup -Name "g_personal"
+
+# 2. Skapa användare och lägg till i grupper
+$Password = ConvertTo-SecureString "Labb123!" -AsPlainText -Force
+New-LocalUser -Name "alice" -Password $Password
+New-LocalUser -Name "bob" -Password $Password
+
+Add-LocalGroupMember -Group "g_ledare" -Member "alice"
+Add-LocalGroupMember -Group "g_personal" -Member "bob"
+
+# 3. Skapa katalogerna
+New-Item -Path "C:\Projekt\Gemensamt" -ItemType Directory -Force
+New-Item -Path "C:\Projekt\Ledning" -ItemType Directory -Force
+
+# 4. Bryt arvet på Projekt-mappen och ta bort Users
+icacls "C:\Projekt" /inheritance:r /grant:r "Administratörer:(OI)(CI)F" "SYSTEM:(OI)(CI)F"
+
+# 5. Sätt behörigheter och arv på undermapparna
+icacls "C:\Projekt\Gemensamt" /grant "g_ledare:(OI)(CI)M" "g_personal:(OI)(CI)M"
+icacls "C:\Projekt\Ledning" /grant "g_ledare:(OI)(CI)M"
+```
 
 ## Specifikation Moment B
 
@@ -81,7 +145,7 @@ Det korta och snabba svaret är att TCP/IP "använder" 5 lager/skikt medans OSI 
   * Windows 11 (`Chas`), IPv4 `192.168.136.128/24`, Gateway `192.168.136.1`
   * Ubuntu (`chas@chas-VMware-Virtual-Platform`), IPv4 `192.168.136.129`. Gateway `192.168.136.1`
 
-### Rutiner och skripts
+### Råa kommandon
 
 Okej! Håll i hatten nu! Nu kommer det mycket kommandon och text! **Håller du i hatten!?**
 
@@ -284,7 +348,97 @@ Successfully processed 1 files; Failed processing 0 files
 PS C:\WINDOWS\system32> icacls "C:\Projekt\Ledning" /grant "g_ledare:(OI)(CI)M"
 processed file: C:\Projekt\Ledning
 Successfully processed 1 files; Failed processing 0 files
-PS C:\WINDOWS\system32>                                                                               #Nu kollar vi om allt är rätt satta!
-PS C:\WINDOWS\system32> Start-Process powershell -Credential "alice" -WorkingDirectory "C:\Projekt"
-![Alice](./img/alice-windows.png)         
+PS C:\WINDOWS\system32>                                                                           
+
+#Nu kollar vi om allt är rätt satta!
+Kör som; runas /user:alice powershell    
 ```
+> ![Alice i Windows](./img/alice-windows.png)
+```
+#vidare till Bob!
+```
+> ![Bob i Powershell](./img/bob-windows.png)
+```
+#Nu kör vi lite snabbare här!
+
+**Alice**
+
+[Powershell (running as chas/alice)]
+
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+PS C:\WINDOWS\system32> Set-Content -Path "C:\Projekt\Gemensamt\arvstest.txt" -Value "Skapad av Alice"
+PS C:\WINDOWS\system32> icacls "C:\Projekt\Gemensamt\arvstest.txt"
+C:\Projekt\Gemensamt\arvstest.txt Chas\g_personal:(I)(M)
+                                  Chas\g_ledare:(I)(M)
+                                  NT instans\SYSTEM:(I)(F)
+                                  BUILTIN\Administratörer:(I)(F)
+
+Successfully processed 1 files; Failed processing 0 files
+PS C:\WINDOWS\system32> Get-Content "C:\Projekt\Gemensamt\arvstest.txt"
+Skapad av Alice
+PS C:\WINDOWS\system32>
+
+#Kommer Alice åt "ledning"?
+
+PS C:\WINDOWS\system32> Set-Location "C:\Projekt\Ledning"
+PS C:\Projekt\Ledning> Set-Content -Path .\styrelseprotokoll.txt -Value "Konfidentiellt: Ny organisationsplan"
+PS C:\Projekt\Ledning> Get-Content .\styrelseprotokoll.txt
+Konfidentiellt: Ny organisationsplan
+PS C:\Projekt\Ledning> icacls .\styrelseprotokoll.txt
+.\styrelseprotokoll.txt Chas\g_ledare:(I)(M)
+                        NT instans\SYSTEM:(I)(F)
+                        BUILTIN\Administratörer:(I)(F)
+
+Successfully processed 1 files; Failed processing 0 files
+PS C:\Projekt\Ledning>
+
+#Inga felmeddelande eller konstigheter!
+
+**Bob**
+
+[Powershell (running as chas/bob)]
+
+Windows PowerShell
+Copyright (C) Microsoft Corporation. All rights reserved.
+
+PS C:\WINDOWS\system32> Add-Content -Path "C:\Projekt\Gemensamt\arvstest.txt" -Value "Bob lade till denna rad via ärvd behörighet."
+PS C:\WINDOWS\system32> Get-Content "C:\Projekt\Gemensamt\arvstest.txt"
+Skapad av Alice
+Bob lade till denna rad via ärvd behörighet.
+PS C:\WINDOWS\system32> icacls "C:\Projekt\Gemensamt\arvstest.txt"
+C:\Projekt\Gemensamt\arvstest.txt Chas\g_personal:(I)(M)
+                                  Chas\g_ledare:(I)(M)
+                                  NT instans\SYSTEM:(I)(F)
+                                  BUILTIN\Administratörer:(I)(F)
+
+Successfully processed 1 files; Failed processing 0 files
+PS C:\WINDOWS\system32>
+
+Vi testar och ser om Bob kan komma åt "ledning"?
+
+PS C:\WINDOWS\system32> Set-Location "C:\Projekt\Ledning"
+Set-Location : Åtkomst nekad
+At line:1 char:1
++ Set-Location "C:\Projekt\Ledning"
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : PermissionDenied: (C:\Projekt\Ledning:String) [Set-Location], UnauthorizedAccessExceptio
+   n
+    + FullyQualifiedErrorId : ItemExistsUnauthorizedAccessError,Microsoft.PowerShell.Commands.SetLocationCommand
+
+Set-Location : Cannot find path 'C:\Projekt\Ledning' because it does not exist.
+At line:1 char:1
++ Set-Location "C:\Projekt\Ledning"
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : ObjectNotFound: (C:\Projekt\Ledning:String) [Set-Location], ItemNotFoundException
+    + FullyQualifiedErrorId : PathNotFound,Microsoft.PowerShell.Commands.SetLocationCommand
+
+PS C:\WINDOWS\system32>
+#Svar nej!
+```
+# Slutsats och AI-reflektion
+
+Äntligen! Nu kan vi summera detta! Jag har tidigare erfarenheter med Linux och dess terminaler. Inte helt van med powershell och deras väldigt specifika kommandon (Om man inte har auto-complete plugins). CMD har man använt några gånger. Det jag fick lära mig på nytt/sprången var skillnanden mellan POSIX och ACL och hur annorlunda powershell "språket" är. Det är här AI kommer in. Eftersom jag inte tänker googla <ins>v-a-r-t-e-n-d-a</ins> powershell-kommando så frågar jag AI vilka kommandon skulle passa här. Jag körde och undersökte om jag kunde köra kommandon annorlunda eller att få ett annat resultat, för att jag har varit med att AI har hallucinaterat flertals gånger, speciellt på Polska eller Kinesiska.....helt enkelt på annat språk.
+
+Slutligen vill jag bara tilägga att detta tog en bra tid att avklara men jag lärde mig faktiskt ganska mycket. En sista grej! AI är <ins>***ett verktyg***</ins>, inte lösningen! Du skyller väl inte på att hammaren som **DU** tappade på tån, orsakade skadan och/eller du skyller heller inte på att hammaren byggde fel?
