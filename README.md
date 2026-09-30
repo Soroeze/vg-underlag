@@ -3,11 +3,14 @@
 
 > [!IMPORTANT]
 > **Kurs**: Introduktion till yrkesrollen och grunderna i IT-infrastruktur (MYH 2025/4008)
+> 
 > **Examinationsform**: Individuell teknisk fördjupningsuppgift (Summativ examination)
+> 
 > **Koppling till VG-krav i kursplanen**: Kursmål 2, 3 och 8
 
 > [!NOTE]
 > **Student**: Joakim Tran
+> 
 > **Beskrivning**: _"Uppgiften bygger vidare på den praktiska labbmiljön samt teorin om nätverk, operativsystem och säkerhet. Den studerande ska självständigt analysera, konfigurerar 
 > och dokumentera en avancerad labbsituation samt resonera kring underliggande mekanismer."_
 
