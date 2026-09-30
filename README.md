@@ -72,3 +72,39 @@ Det korta och snabba svaret är att TCP/IP "använder" 5 lager/skikt medans OSI 
 > | :--- | :--- | :--- | :--- |
 > | **`Projekt/Gemensamt`** | Läsa & Skriva | Läsa & Skriva | Skapa en testfil här som båda ska kunna redigera. |
 > | **`Projekt/Ledning`** | Ingen åtkomst | Läsa & Skriva | `g_personal` ska nekas tillträde helt. |
+>
+## System- och nätverksöversikt
+
+* Virtualisering: VMware Workstation Pro
+* Nätverkstyp: Isolated Network (VMnet2)
+* Nätverkskonfiguration:
+  * Windows 11 (`Chas`), IPv4 `192.168.136.128/24`, Gateway `192.168.136.1`
+  * Ubuntu (`chas@chas-VMware-Virtual-Platform`), IPv4 `192.168.136.129`. Gateway `192.168.136.1`
+
+### Rutiner och skripts
+
+Okej! Håll i hatten nu! Nu kommer det mycket kommandon och text! **Håller du i hatten!?**
+
+#### Ubuntu/Linux
+
+```
+# 1. Skapa konton och grupper. Först grupp och sedan användare med mappar och shell /bin/bash. Annars blir det DASH som är elementär terminal. glömde inte gruppen och sedan användare!
+sudo groupadd g_ledare
+sudo groupadd g_personal
+sudo useradd -m -s /bin/bash -g g_ledare alice
+sudo useradd -m -s /bin/bash -g g_personal bob
+
+# 2. Skapa katalogstrukturen. chmod 755 på /projekt och dess underkataloger. Owner, group, others. Alltså Owner har alla rättigheter, group har rx (läsa och köra), others är detsamma som "group". 
+sudo mkdir -p /Projekt/Gemensamt /Projekt/Ledning
+sudo chmod 755 /Projekt
+
+# 3. Mappen Ledning. Ägaren/användare root och därmed gruppen g_ledare ska ha rättigheter eller i direkt-översättning, ägarskapet. chmod 770, owner är rwx och detsamma med gruppen g_ledare, andra får inte vara med på mappen "Ledning"!
+sudo chown root:g_ledare /Projekt/Ledning
+sudo chmod 770 /Projekt/Ledning
+
+# 4. Mappen Gemensamt (POSIX + ACL). Vi kan göra ägaren till root genom posix och göra via ACL också. I fall att Windows miljön inte kan läsa av POSIX. Helt enkelt, det är bra att göra både och!
+sudo chown root:root /Projekt/Gemensamt
+sudo chmod 770 /Projekt/Gemensamt
+sudo setfacl -m g:g_ledare:rwx,g:g_personal:rwx /Projekt/Gemensamt
+sudo setfacl -d -m g:g_ledare:rwx,g:g_personal:rwx /Projekt/Gemensamt
+```
