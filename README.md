@@ -31,3 +31,41 @@ Det korta och snabba svaret är att TCP/IP "använder" 5 lager/skikt medans OSI 
 | **Transport (L4)** | TCP / UDP | Här kan det sättas **Source Port** (t.ex.`50000` port range då det finns många fler att slumpmässa fram) och **Destination Port** som 99,9% är `443` för HTTPS, `53` för DNS (Vi pratar inte om dem andra just så som `80`för HTTP eller `853`för TLS just nu. Lite överkurs för denna presentationen). | **Port Address Translation (PAT):** Routern kanske behöver mappa om Source porten för att matcha vad NAT vill ha. Så att dem inte går till portar som är stängda eller helt enkelt underlätta kommunikationen mellan klienter och webbsida. |
 | **Nätverk (L3)** | IP | Vi sätter t.ex. **Source IP** `192.168.1.50` och **Dest IP** (8.8.8.8) google.com. | **Source NAT eller bara NAT:** Här händer magin! Här tolkas och dirigeras nätverket till sina rätta platser. I detta fallet så vill `192.168.1.50` komma åt google.com (8.8.8.8) och routern gör sin magi och sen slussar den ut förfrågan till från routern, eller ja, från klientens perspektiv Gateway och nu måste förfrågan passera ut till den publika IP. Vi kan även snabbt ta upp TTL (Time to live). Alltså hur länge ett last/paket/förfrågan får "leva" på varje hopp fram till google.com. Annars så kan man råka ut att det åker runt i cirklar! Du trodde heller väl inte att det var en rakt sträcka till google.com!? |
 | **Länk / Datalänk (L2)** | Ethernet | **Source MAC** (klientens nätverkskort) och **Destination MAC** (Default Gateways MAC-adress). | Ah! Dem fysiska länkarna och adresserna! Dem måste ju hitta varandra fysiskt också. MAC-adresser är som namnet på enheterna.**OBS!** Numera så kan man slumpmässa fram MAC-adresser för säkerhetens skull innan den skickas ut från publika IP eller att varje hopp/NAT men vi håller oss till privat nätverk så länge. Här tas reda på vilka och vad för enheter som pratas. I detta fallet är det ju klientens nätverkskort som säger till att jag har denna MAC-adress så du vet det! Gateway/routern säger "OKEJ! Då vet jag! Jag har denna MAC-adressen så du vet de med!" Coolt säger båda och nu är vi ihopkopplade via Ethernet och kan prata med varandra!
+
+![Förenklad ritning av nätverkets resa](./img/network-travel.png)
+
+# 3. Moment B: Jämförande OS- och Behörighetsanalys (Mål 2)
+
+##
+
+
+##
+
+
+# 4. Moment C: Spårbarhet & Överlämningsdokumentation (Mål 8)
+
+## Specifikation Moment B
+
+> [!NOTE]
+> ### Uppgiftsspecifikation: Moment B
+> 
+> #### 1. Företagsscenario & Konto-uppsättning
+> Skapa följande kontostruktur i både Linux och Windows:
+> * **Grupper:**
+>   * `g_ledare` (För chefer/ledare)
+>   * `g_personal` (För övrig personal)
+> * **Användare:**
+>   * `alice` (Medlem i `g_ledare`)
+>   * `bob` (Medlem i `g_personal`)
+> 
+> #### 2. Mappstruktur & Kravmatris
+> Skapa en huvudmapp som heter `Projekt` med två undermappar:
+> 1. `Projekt/Gemensamt`
+> 2. `Projekt/Ledning`
+> 
+> Sätt följande behörigheter på mapparna:
+> 
+> | Mapp | Grupp: `g_personal` (Bob) | Grupp: `g_ledare` (Alice) | Specialkrav / Testfall |
+> | :--- | :--- | :--- | :--- |
+> | **`Projekt/Gemensamt`** | Läsa & Skriva | Läsa & Skriva | Skapa en testfil här som båda ska kunna redigera. |
+> | **`Projekt/Ledning`** | Ingen åtkomst | Läsa & Skriva | `g_personal` ska nekas tillträde helt. |
