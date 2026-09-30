@@ -8,7 +8,7 @@
 > 
 > **Koppling till VG-krav i kursplanen**: Kursmål 2, 3 och 8
 
-> [!NOTE]
+> [!TIP]
 > **Student**: Joakim Tran
 > 
 > **Beskrivning**: _"Uppgiften bygger vidare på den praktiska labbmiljön samt teorin om nätverk, operativsystem och säkerhet. Den studerande ska självständigt analysera, konfigurerar 
