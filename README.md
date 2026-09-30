@@ -21,7 +21,7 @@ hur trafiken slussas ut genom det lokala nätet och gatewayen, samt vad som fakt
 
 ## Nätverkets resa
 
-Vi kan börja med att välja en adress eller domän. Varför inte den klassiska google.com (8.8.8.8)? Men först! Ska vi gå genom OSI | /TCP/IP? Vad är skillnanden mellan OSI och TCP/IP?
+Vi kan börja med att välja en adress eller domän. Varför inte den klassiska google.com (8.8.8.8)? Men först! Ska vi gå genom OSI och TCP/IP? Vad är skillnanden mellan OSI och TCP/IP?
 Det korta och snabba svaret är att TCP/IP "använder" 5 lager/skikt medans OSI "använder" 7 lager/skikt. Se bilden nedan för förtydligande. I detta fallet så räcker det gott och väl med TCP/IP
 
 ![OSI vs TCP/IP](./img/OSI-model-vs-TCP-IP-model.png)
